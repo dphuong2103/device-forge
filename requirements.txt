@@ -1,0 +1,72 @@
+### Core Concept
+- Users install a lightweight **Agent** on their Windows computer.
+- The Agent creates and manages virtual Android devices on the user’s own machine.
+- Users interact with a modern web interface that runs locally (localhost).
+- Our cloud only handles accounts, subscriptions, and license validation.
+- The product is designed for developers and QA teams to test Android applications across different device configurations.
+
+### Key Features the system must support
+- Create and manage multiple virtual Android devices locally
+- Live screen streaming + touch/keyboard input in the browser
+- **Main Device** concept + multi-device actions (apply changes to Main Device and/or selected devices)
+- One-click **Randomize Device Identity** (realistic profiles for testing)
+- Set / change **Proxy** (HTTP & SOCKS5)
+- Set / change **GPS Location**
+- **Full Device State Snapshot & Restore** (identity + apps + app data + settings)
+- Bulk actions
+- Subscription / license system
+
+### Technical Preferences
+- Frontend: Next.js (App Router) + TypeScript (runs on localhost)
+- Agent Backend: Go (preferred) or another high-performance language
+- Real-time: WebSocket
+- Communication: Frontend ↔ Local Agent via localhost API + WebSocket
+- Agent connects outbound to our cloud only for authentication and subscription checks
+
+---
+
+### What You Must Deliver
+
+1. **High-Level Architecture**
+   - Clear explanation of components
+   - Mermaid diagram
+   - How the local web UI talks to the Agent
+   - How the Agent manages Android devices
+   - How license/subscription is validated with the cloud
+
+2. **Agent Design (Windows)**
+   - How the Agent is structured (service + tray icon recommended)
+   - How it starts/stops virtual Android devices
+   - Recommended technology for running Android instances locally
+   - How screen streaming and input injection work
+
+3. **Core Features Implementation**
+   - Randomize Device Identity
+   - Proxy injection
+   - GPS spoofing
+   - Main Device + multi-device synchronization
+   - Snapshot & Restore (what is saved and how)
+
+4. **Frontend (Next.js on localhost)**
+   - How it discovers and connects to the local Agent
+   - Recommended structure
+
+5. **Cloud Side (minimal)**
+   - User accounts
+   - Subscription & license validation
+   - What data is stored in the cloud vs locally
+
+6. **Security Considerations**
+   - Local communication security
+   - License protection
+   - Isolation between devices
+
+7. **Phased Implementation Plan**
+   - Phase 1: MVP (single device + basic controls)
+   - Phase 2: Multi-device + Main Device + Snapshots
+   - Phase 3: Polish + advanced features
+
+Use clean, professional language suitable for a legitimate Android application testing tool.
+Do not use words like “farm”. Focus on testing and quality assurance use cases.
+
+Start with the high-level architecture and Mermaid diagram.

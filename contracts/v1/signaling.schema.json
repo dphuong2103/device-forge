@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://device-force.local/contracts/v1/signaling.schema.json",
+  "title": "WebRTC signaling message",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "sdp"],
+      "properties": {
+        "type": { "enum": ["offer", "answer"] },
+        "sdp": { "type": "string", "minLength": 1, "maxLength": 1048576 }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "candidate"],
+      "properties": {
+        "type": { "const": "ice-candidate" },
+        "candidate": { "type": "string", "maxLength": 16384 },
+        "sdpMid": { "type": ["string", "null"], "maxLength": 256 },
+        "sdpMLineIndex": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+openapi: 3.1.0
+info:
+  title: Device Force Local Agent API
+  version: 1.0.0
+  description: Loopback-only API served from the same origin as the local web interface.
+servers:
+  - url: http://127.0.0.1:{port}/api/v1
+    variables:
+      port:
+        default: "47631"
+security:
+  - localSession: []
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Agent health. This response contains no secrets or device data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/$defs/Health"
+  /session/bootstrap:
+    post:
+      operationId: exchangeBootstrapToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 256
+      responses:
+        "204":
+          description: Session cookie and CSRF token issued; bootstrap token consumed.
+          headers:
+            X-CSRF-Token:
+              schema: { type: string }
+        "401": { $ref: "#/$defs/ErrorResponse" }
+  /preflight:
+    get:
+      operationId: getPreflight
+      responses:
+        "200":
+          description: Host and Android runtime readiness checks.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, checks]
+                properties:
+                  status: { enum: [pass, warn, fail] }
+                  checks:
+                    type: array
+                    items: { $ref: "#/$defs/PreflightCheck" }
+  /devices:
+    get:
+      operationId: listDevices
+      responses:
+        "200":
+          description: Managed devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/$defs/Device" }
+    post:
+      operationId: createDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/$defs/CreateDevice" }
+      responses:
+        "202":
+          description: Provisioning command accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/$defs/Command" }
+        "409": { $ref: "#/$defs/ErrorResponse" }
+  /devices/{deviceId}:
+    parameters:
+      - $ref: "#/$defs/DeviceId"
+    get:
+      operationId: getDevice
+      responses:
+        "200":
+          description: Managed device.
+          content:
+            application/json:
+              schema: { $ref: "#/$defs/Device" }
+        "404": { $ref: "#/$defs/ErrorResponse" }
+    delete:
+      operationId: deleteDevice
+      parameters:
+        - name: confirmation
+          in: header
+          required: true
+          schema: { type: string, const: delete-device }
+      responses:
+        "202":
+          description: Deletion command accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/$defs/Command" }
+  /devices/{deviceId}/commands:
+    parameters:
+      - $ref: "#/$defs/DeviceId"
+    post:
+      operationId: submitDeviceCommand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/$defs/SubmitCommand" }
+      responses:
+        "202":
+          description: Command accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/$defs/Command" }
+        "409": { $ref: "#/$defs/ErrorResponse" }
+  /commands/{commandId}:
+    get:
+      operationId: getCommand
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Command state.
+          content:
+            application/json:
+              schema: { $ref: "#/$defs/Command" }
+        "404": { $ref: "#/$defs/ErrorResponse" }
+  /events:
+    get:
+      operationId: connectEvents
+      description: Upgrade to the authenticated Agent event WebSocket. Messages conform to events.schema.json.
+      responses:
+        "101": { description: WebSocket upgrade accepted }
+        "401": { $ref: "#/$defs/ErrorResponse" }
+  /media/{deviceId}/offer:
+    post:
+      operationId: createMediaOffer
+      parameters:
+        - $ref: "#/$defs/DeviceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "signaling.schema.json"
+      responses:
+        "200":
+          description: WebRTC answer.
+          content:
+            application/json:
+              schema:
+                $ref: "signaling.schema.json"
+components:
+  securitySchemes:
+    localSession:
+      type: apiKey
+      in: cookie
+      name: device_force_session
+$defs:
+  DeviceId:
+    name: deviceId
+    in: path
+    required: true
+    schema: { type: string, format: uuid }
+  Health:
+    type: object
+    additionalProperties: false
+    required: [status, version]
+    properties:
+      status: { type: string, const: ok }
+      version: { type: string }
+  PreflightCheck:
+    type: object
+    additionalProperties: false
+    required: [id, status, message]
+    properties:
+      id: { type: string }
+      status: { enum: [pass, warn, fail] }
+      message: { type: string }
+      remediation: { type: string }
+  Device:
+    type: object
+    additionalProperties: false
+    required: [id, name, state, image, isMain, selected, version]
+    properties:
+      id: { type: string, format: uuid }
+      name: { type: string, minLength: 1, maxLength: 80 }
+      state: { enum: [stopped, provisioning, starting, booting, ready, stopping, snapshotting, restoring, failed, deleting] }
+      image: { type: string }
+      isMain: { type: boolean }
+      selected: { type: boolean }
+      version: { type: integer, minimum: 1 }
+      failure: { $ref: "#/$defs/Problem" }
+  CreateDevice:
+    type: object
+    additionalProperties: false
+    required: [name, image, hardwareProfile]
+    properties:
+      name: { type: string, minLength: 1, maxLength: 80 }
+      image: { type: string }
+      hardwareProfile: { type: string }
+      profileSeed: { type: string, maxLength: 128 }
+  SubmitCommand:
+    type: object
+    additionalProperties: false
+    required: [type, expectedDeviceVersion]
+    properties:
+      type: { enum: [start, stop, force-stop, apply-profile, set-proxy, set-location, create-snapshot, restore-snapshot] }
+      expectedDeviceVersion: { type: integer, minimum: 1 }
+      idempotencyKey: { type: string, minLength: 16, maxLength: 128 }
+      parameters: { type: object }
+  Command:
+    type: object
+    additionalProperties: false
+    required: [id, type, state, createdAt]
+    properties:
+      id: { type: string, format: uuid }
+      deviceId: { type: string, format: uuid }
+      type: { type: string }
+      state: { enum: [queued, running, succeeded, failed, cancelled, timed-out] }
+      createdAt: { type: string, format: date-time }
+      startedAt: { type: string, format: date-time }
+      finishedAt: { type: string, format: date-time }
+      problem: { $ref: "#/$defs/Problem" }
+  Problem:
+    type: object
+    additionalProperties: false
+    required: [code, title, correlationId]
+    properties:
+      code: { type: string }
+      title: { type: string }
+      detail: { type: string }
+      remediation: { type: string }
+      correlationId: { type: string }
+  ErrorResponse:
+    description: Operation failed.
+    content:
+      application/problem+json:
+        schema: { $ref: "#/$defs/Problem" }

@@ -1,0 +1,22 @@
+{
+  "name": "device-force-v2",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.9.0"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.11",
+    "vitest": "4.1.11"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @device-force/web && node scripts/sync-web.mjs",
+    "check": "npm run lint --workspace @device-force/web && npm run typecheck --workspace @device-force/web",
+    "format:check": "npm run format:check --workspace @device-force/web",
+    "test": "npm run test --workspace @device-force/web"
+  }
+}
